@@ -179,7 +179,7 @@ class RServerTest extends \PHPUnit\Framework\TestCase
             ->select()
             ->from(\App\Models\Platform::getTableName())
             ->where('"__vendor_id" = :__vendor_id AND "title" = :title')
-            ->params([':__vendor_id' => $vendor->__id, ':title' => $dataSet->platformTitle]);
+            ->params([':__vendor_id' => $vendor->__id, ':title' => $dataSet->chassis]);
         $platforms = \App\Models\Platform::findAllByQuery($query);
         $this->assertEquals(1, $platforms->count());
         $platform = $platforms->first();
@@ -379,7 +379,7 @@ class RServerTest extends \PHPUnit\Framework\TestCase
             ->select()
             ->from(\App\Models\Platform::getTableName())
             ->where('"__vendor_id" = :__vendor_id AND "title" = :title')
-            ->params([':__vendor_id' => $vendor->__id, ':title' => $dataSet->platformTitle]);
+            ->params([':__vendor_id' => $vendor->__id, ':title' => $dataSet->chassis]);
         $platforms = \App\Models\Platform::findAllByQuery($query);
         $this->assertEquals(1, $platforms->count());
         $platform = $platforms->first();
