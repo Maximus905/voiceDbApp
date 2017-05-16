@@ -38,7 +38,7 @@ class RServer extends Controller
 
     public function actionDefault()
     {
-        define('SLEEPTIME', 100000);
+        define('SLEEPTIME', 100000); // микросекунды
         define('ITERATIONS', 520); // Колличество попыток получить доступ к db.lock файлу
 
 //        $startTime = microtime(true);
@@ -74,8 +74,8 @@ class RServer extends Controller
             if (!isset($srcData->platformVendor)) {
                 $errors->add(new Exception('DATASET: No field platformVendor'));
             }
-            if (!isset($srcData->platformTitle)) {
-                $errors->add(new Exception('DATASET: No field platformTitle'));
+            if (!isset($srcData->chassis)) {
+                $errors->add(new Exception('DATASET: No field chassis'));
             }
             if (!isset($srcData->platformSerial)) {
                 $errors->add(new Exception('DATASET: No field platformSerial'));
@@ -160,8 +160,22 @@ class RServer extends Controller
                         ->save();
                 }
 
+                // Process value of "Platform" Title
+                $processedValueTitle = $srcData->chassis;
+                $matches = [
+                    $vendor->title,
+                    '-CHASSIS',
+                    'CHASSIS',
+                ];
+                foreach ($matches as $match) {
+                    $requestPlatformTitle = mb_ereg_replace($match, '', $processedValueTitle, "i");
+                    $processedValueTitle = $requestPlatformTitle;
+                }
+                if (false === $requestPlatformTitle) {
+                    $errors->add(new Exception('Platform: No title chassis'));
+                }
+
                 // Determine "Platform"
-                $requestPlatformTitle = $srcData->platformTitle;
                 $platform = $vendor->platforms->filter(
                     function($platform) use ($requestPlatformTitle) {
                         return $requestPlatformTitle == $platform->title;
@@ -171,7 +185,7 @@ class RServer extends Controller
                     $platform = (new Platform())
                         ->fill([
                             'vendor' => $vendor,
-                            'title' => $srcData->platformTitle
+                            'title' => $requestPlatformTitle
                         ])
                         ->save();
                 }
@@ -377,7 +391,7 @@ class RServer extends Controller
         }
 
 //        $stopTime = microtime(true);
-//        $logger->error($srcData->ip . '-> ' . $stopTime - $startTime);
+//        $logger->error($srcData->ip . '-> ' . ($stopTime - $startTime));
 
         echo(json_encode($response->toArray()));
 
