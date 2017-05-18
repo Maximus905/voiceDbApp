@@ -13,6 +13,7 @@ class Rclient extends Command
         $srcDir = realpath(ROOT_PATH . '/Tmp/Test_src');
         $errDir = realpath(ROOT_PATH . '/Tmp/Test_err');
         $okDir = realpath(ROOT_PATH . '/Tmp/Test_ok');
+        $tmpDir = realpath(ROOT_PATH . '/Tmp/Test_dataset_2');
 
         $files = array_slice(scandir($srcDir), 2);
 
@@ -73,6 +74,19 @@ class Rclient extends Command
             echo $oldFileName . ' -> ' . realpath($srcDir . '\\' . $file) . PHP_EOL;
         }
 
+//        $srcDir = realpath(ROOT_PATH . '/Tmp/Test_dataset_2');
+//        $destinationDir = realpath(ROOT_PATH . '/Tmp/Test_dataset_1');
+//
+//        $files = scandir($srcDir);
+//        foreach ($files as $file) {
+//            if ('.' == $file || '..' == $file) {
+//                continue;
+//            }
+//            $oldFileName = realpath($srcDir . '\\' . $file);
+//            rename($oldFileName, $destinationDir . '\\' . $file);
+//            echo $oldFileName . ' -> ' . realpath($destinationDir . '\\' . $file) . PHP_EOL;
+//        }
+
         echo 'OK';
     }
 
@@ -102,6 +116,46 @@ class Rclient extends Command
         fclose($fp);
 
 
+        die;
+    }
+
+    public function actionTestOne()
+    {
+        $url = "http://voice.loc/rserver";
+
+//        $srcDir = realpath(ROOT_PATH . '/Tmp/Test_dataset_2');
+        $srcDir = realpath(ROOT_PATH . '/Tmp/Test_src');
+        $filePath = realpath($srcDir . '\\' . 'item_201705059191946390600.json');
+
+        $jsondata = file_get_contents($filePath);
+
+        $curl = curl_init($url);
+        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'POST');
+        curl_setopt($curl, CURLOPT_HEADER, false);
+        curl_setopt($curl, CURLOPT_POSTFIELDS, $jsondata);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        $result =  json_decode(curl_exec($curl));
+
+//        $result =  curl_exec($curl);
+//        var_dump($result);die;
+
+        $statusCode = (400 == $result->httpStatusCode) ? ' Bad Request' : ' Accepted';
+        echo ' request 1  ->  ' . $result->httpStatusCode  . $statusCode . PHP_EOL;
+
+        curl_close($curl);
+
+    }
+
+    public function actionVendor()
+    {
+        $cacheDir = realpath(ROOT_PATH . '/Tmp/Test_dataset_2/');
+        $mt = explode(' ', microtime());
+        $rawmc = explode('.', $mt[0]);
+        $mc = $rawmc[1];
+        $datetime = date('YmdGis', $mt[1]);
+        $fileName = $cacheDir . '\\' . 'item_' . $datetime . $mc . '.json';
+
+        var_dump($fileName);
         die;
     }
 }

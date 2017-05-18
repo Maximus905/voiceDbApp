@@ -7,6 +7,7 @@ use App\Models\City;
 use App\Models\ModuleItem;
 use App\Models\Network;
 use App\Models\Office;
+use App\Models\Platform;
 use App\Models\Region;
 use App\Models\Vendor;
 use App\Models\Vrf;
@@ -21,24 +22,16 @@ class Test extends Controller
 {
     public function actionDefault()
     {
-        $url = "http://voice.loc/rServer/testServer.json";
-//        $url = "http://10.99.120.170/rServer/serverTest.json";
-//        $url = "http://voice.loc/rServer/serverTest";
-
-        $files= [1,2,3,4,5,6];
-        $result = [];
-
-        foreach ($files as $file) {
-            $curl = curl_init($url);
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-            $result[] =  curl_exec($curl);
-            if (curl_error($curl)) {
-                echo curl_error($curl);die;
+        $res = '{"platformSerial": "FCZ104422JG", "applianceModules": [], "LotusId": "65", "hostname": "RegAstrahan_Boev", "applianceType": "appliance", "softwareVersion": "12.4(21)", "chassis": "1841", "platformTitle": "1841 chassis", "ip": "10.100.240.7/24", "applianceSoft": "C1841-SPSERVICESK9-M", "platformVendor": "CISCO"}';
+        $srcData = (new Std())->fill(json_decode($res));
+        $requestPlatformTitle = $srcData->chassis;
+        $platform = Platform::findAll()->filter(
+            function($platform) use (&$srcData) {
+                return $srcData->chassis == $platform->title;
             }
-            curl_close($curl);
-        }
-        var_dump($result);
-        die;
+        );
+        var_dump($platform);die;
+
     }
 
     public function actionTestModule()
