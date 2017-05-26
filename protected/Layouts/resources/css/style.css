@@ -311,6 +311,10 @@ navbar styles
     color: #fff;
     background-color: #286090;
 }
+.navbar-btn-custom {
+    margin-top:14px;
+    margin-bottom: 8px;
+}
 /*=========================
 style for last update time in table
 ===========================*/

@@ -178,6 +178,9 @@ APP.dateToUtc = function (date, toUTC) {
     // console.log(new Date(InPutdate))
     return new Date(InPutdate);
 };
+APP.setLink = function ($linkSelector, $url) {
+    $($linkSelector).attr("href", $url);
+};
 
 jQuery(function ($) {
     APP.currentPopup = APP.currentPopup || {};

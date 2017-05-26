@@ -1,0 +1,7 @@
+{% extends 'Index.html' %}
+
+{% block main %}
+    {% for error in errors %}
+        <p>{{ error.message|raw }}</p>
+    {% endfor %}
+{% endblock %}

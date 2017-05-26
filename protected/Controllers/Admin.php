@@ -917,6 +917,7 @@ class Admin extends Controller
         $this->data->offices = Office::findAll(['order' => 'title']);
         $this->data->regions = Region::findAll(['order' => 'title']);
         $this->data->activeLink->devices = true;
+        $this->data->exportUrl = '/export/hardInvExcel';
         $this->data->userLevel = User::$level;
     }
 

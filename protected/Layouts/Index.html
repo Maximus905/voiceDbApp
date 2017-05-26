@@ -67,7 +67,13 @@
                         </ul>
                     </li>
                 </ul>
+
                 <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <p class="navbar-btn-custom">
+                            <a id="excelExport" class="btn btn-success btn-xs hidden" href="#" title="Экспорт в Excel">Экспорт</a>
+                        </p>
+                    </li>
                     <li class="dropdown {% if activeLink.dictionary == true %} active {% endif %}">
                         <a href="#" class="dropdown-toggle active" data-toggle="dropdown">Справочники <b class="caret"></b></a>
                         <ul class="dropdown-menu">
@@ -90,6 +96,13 @@
     {% block main %}
     {% endblock %}
 </div>
+<script>
+    var APP = APP || {};
+    if ("{{exportUrl}}") {
+        $("#excelExport").removeClass("hidden");
+        APP.setLink("#excelExport", "{{ exportUrl }}");
+    }
+</script>
     {% block JS %}
 
     {% endblock %}
