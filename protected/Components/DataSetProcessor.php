@@ -485,22 +485,24 @@ class DataSetProcessor extends Std
         $vrf = $this->processVrfDataSet();
         $dataPort = DataPort::findByIpVrf($ipAddress, $vrf);
 
-        if (($dataPort instanceof DataPort) && ($dataPort->appliance->getPk() !== $appliance->getPk()) ) {
+        if ($dataPort instanceof DataPort) {
             $dataPort->fill([
                 'appliance' => $appliance,
+                'vrf' => $vrf,
+                'isManagement' => true,
             ])->save();
         }
 
         if (!($dataPort instanceof DataPort)) {
             $portType = $this->processPortTypeDataSet();
 
-            (new DataPort())
-                ->fill([
-                    'ipAddress' => $ipAddress,
-                    'portType' => $portType,
-                    'appliance' => $appliance,
-                    'vrf' => $vrf,
-                ])->save();
+            (new DataPort())->fill([
+                'ipAddress' => $ipAddress,
+                'portType' => $portType,
+                'appliance' => $appliance,
+                'vrf' => $vrf,
+                'isManagement' => true,
+            ])->save();
         }
     }
 

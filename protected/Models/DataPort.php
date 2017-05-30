@@ -18,6 +18,7 @@ use T4\Orm\Model;
  * @property string $macAddress
  * @property string $details
  * @property string $comment
+ * @property bool $isManagement
  *
  * @property Appliance $appliance
  * @property DPortType $portType
@@ -31,7 +32,8 @@ class DataPort extends Model
             'ipAddress' => ['type' => 'string'],
             'macAddress' => ['type' => 'string'],
             'details' => ['type' => 'json'],
-            'comment' => ['type' => 'text']
+            'comment' => ['type' => 'text'],
+            'isManagement' => ['type' => 'boolean']
         ],
         'relations' => [
             'appliance' => ['type' => self::BELONGS_TO, 'model' => Appliance::class],
@@ -220,6 +222,11 @@ class DataPort extends Model
                 $this->network = $network;
             }
         }
+
+        if (true === $this->isNew && null === $this->isManagement) {
+            $this->isNotManagement();
+        }
+
         return parent::beforeSave();
     }
 
@@ -291,5 +298,16 @@ class DataPort extends Model
     {
         $result = self::findAllByIpVrf($ip, $vrf)->first();
         return (null === $result) ? false : $result;
+    }
+
+
+    public function isManagement()
+    {
+        $this->isManagement = true;
+    }
+
+    public function isNotManagement()
+    {
+        $this->isManagement = false;
     }
 }

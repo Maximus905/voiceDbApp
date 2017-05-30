@@ -95,4 +95,22 @@ class Appliance extends Model
     {
         return $this->lastUpdate ? (new \DateTime($this->lastUpdate))->format('Y-m-d H:i') : null;
     }
+
+    /**
+     * @return string managementIp|bool
+     */
+    public function getManagementIp()
+    {
+        $dataPort = $this->dataPorts->filter(
+            function($dataPort) {
+                return true === $dataPort->isManagement;
+            }
+        )->first();
+
+        if ($dataPort instanceof DataPort) {
+            return preg_replace('~/.+~', '', $dataPort->ipAddress);
+        }
+
+        return false;
+    }
 }
