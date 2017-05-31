@@ -1101,6 +1101,17 @@ class Admin extends Controller
                 }
             }
 
+            // если указан management IP - создать data port
+            if (!empty($data->managementIp)) {
+                (new DataPort())->fill([
+                    'ipAddress' => $data->managementIp,
+                    'portType' => DPortType::findByType('Ethernet'),
+                    'appliance' => $appliance,
+                    'vrf' => Vrf::instanceGlobalVrf(),
+                    'isManagement' => true,
+                ])->save();
+            }
+
             Appliance::getDbConnection()->commitTransaction();
         } catch (MultiException $e) {
             Appliance::getDbConnection()->rollbackTransaction();
