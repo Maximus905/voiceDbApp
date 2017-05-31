@@ -3,25 +3,22 @@
 namespace App\Controllers;
 
 use App\Components\Ip;
+use App\Components\Timer;
 use App\Models\Appliance;
-use App\Models\City;
 use App\Models\ModuleItem;
 use App\Models\Network;
 use App\Models\Office;
-use App\Models\Platform;
 use App\Models\Region;
 use App\Models\Vendor;
 use App\Models\Vrf;
-use T4\Core\Collection;
 use T4\Core\Exception;
 use T4\Core\MultiException;
-use T4\Core\Std;
-use T4\Http\Request;
 use T4\Mvc\Controller;
-use T4\Orm\Model;
 
 class Test extends Controller
 {
+    use DebugTrait;
+
     public function actionDefault()
     {
         /**
@@ -34,6 +31,18 @@ class Test extends Controller
 
         die;
     }
+
+    public function actionRegions($region = null)
+    {
+        $timer = Timer::instance();
+        if (!empty($region)) {
+            $this->actionAddRegion($region);
+        }
+        $timer->fix('проверка empty');
+        $this->data->regions = Region::findAll(['order' => 'title']);
+        $timer->fix('Region::findAll');
+    }
+
     public function actionTable()
     {
         $asc = function (Office $office_1, Office $office_2) {
@@ -59,29 +68,6 @@ class Test extends Controller
         die;
     }
 
-    public function actionTestModule()
-    {
-        $module = (new \App\Models\Module())
-            ->fill([
-                'title' => 'test',
-                'vendor' => Vendor::findByTitle('test')
-            ])
-            ->save();
-
-        $item1 = (new ModuleItem())
-            ->fill([
-                'serialNumber' => 'sn1',
-                'appliance' => Appliance::findAll()->first(),
-                'location' => Office::findAll()->first(),
-                'module' => $module
-            ])
-            ->save();
-        var_dump($module->moduleItems);
-        $item1->delete();
-        $module->delete();
-        die;
-
-    }
 
     public function actionGenNet()
     {
@@ -221,16 +207,6 @@ class Test extends Controller
     }
 
 
-    public function actionRegions($region = null)
-    {
-        //var_dump($region);
-        if (!empty($region)) {
-            $this->actionAddRegion($region);
-        }
-        $this->data->regions = Region::findAll(['order' => 'title']);
-        //var_dump($this->data);
-    }
-
     public function actionAddAppliance()
     {
         $this->data->response = 'Hello!';
@@ -271,8 +247,6 @@ class Test extends Controller
 
     public function actionOffices()
     {
-        $test = Appliance::findAll()->first();
-        var_dump($test->getManagementIp());die;
         $asc = function (Office $office_1, Office $office_2) {
             return (0 != strnatcmp($office_1->address->city->region->title, $office_2->address->city->region->title)) ?: 1;
         };

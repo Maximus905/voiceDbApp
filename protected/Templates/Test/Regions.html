@@ -1,56 +1,6 @@
 {% extends 'Index.html' %}
 
 {% block main %}
-    <div class="container-fluid">
-        <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
-            <div class="container-fluid">
-                <!-- Brand and toggle get grouped for better mobile display -->
-                <div class="navbar-header">
-                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
-                        <span class="sr-only">Toggle navigation</span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                    </button>
-                    <a class="navbar-brand" href="#">Home</a>
-                </div>
-
-                <!-- Collect the nav links, forms, and other content for toggling -->
-                <div class="collapse navbar-collapse navbar-ex1-collapse">
-                    <ul class="nav navbar-nav">
-                        <li>
-                            <a href="/admin/offices">Офисы</a>
-                        </li>
-                        <li>
-                            <a href="/admin/devices">Оборудование</a>
-                        </li>
-                    </ul>
-                    <ul class="nav navbar-nav navbar-right">
-                        <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Справочники <b class="caret"></b></a>
-                            <ul class="dropdown-menu">
-                                <li><a href="/admin/offices">Офисы</a></li>
-                                <li><a href="/admin/regions">Регионы</a></li>
-                                <li><a href="/admin/cities">Города</a></li>
-                                <li><a href="/admin/officeStatuses">Статусы офисов</a></li>
-                                <li><a href="/admin/devparts">Оборудование</a></li>
-                            </ul>
-                        </li>
-                    </ul>
-                </div><!-- /.navbar-collapse -->
-
-            </div>
-        </nav>
-
-        {% if errors is defined %}
-            <div class="alert alert-danger">
-                    {% for error in errors %}
-                        <p>{{ error.message }}</p>
-                    {% endfor %}
-            </div>
-        {% endif %}
-        <div class="row">
-            <main class="cities">
                 <div class="col-xs-5">
                     <table id="regsTable" class="table table-bordered table-hover table-striped">
                         <thead>
@@ -87,8 +37,4 @@
                         </tbody>
                     </table>
                 </div>
-            </main>
-
-        </div>
-    </div>
 {% endblock %}

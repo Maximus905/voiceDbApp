@@ -31,7 +31,9 @@
                             <td>{{ office.status.title }}</td>
                             <td class="text-center">
                                 <a class="btn btn-success btn-xs" href="/modal/editOffice?id={{ office.getPK }}" role="button" data-action="get-popup"><span class="glyphicon glyphicon-pencil" aria-hidden="true" title="редактировать офис"></span></a>
+                                {% if user.level > 2 %}
                                 <a class="btn btn-danger btn-xs" href="/admin/delOffice?id={{ office.getPK }}" role="button" data-action="delete"><span class="glyphicon glyphicon-trash" aria-hidden="true" title="удалить офис"></span></a>
+                                {% endif %}
                             </td>
                         </tr>
                     {% endfor %}

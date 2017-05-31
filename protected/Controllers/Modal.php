@@ -25,6 +25,8 @@ use T4\Mvc\Controller;
 
 class Modal extends Controller
 {
+    use DebugTrait;
+
     public function actionAddRegion()
     {
         $this->data->path = (new Request())->path;
@@ -177,7 +179,6 @@ class Modal extends Controller
         $this->data->software = Software::findAll(['order' => 'title']);
         $this->data->modules = Module::findAll(['order' => 'title']);
         $this->data->applianceTypes = ApplianceType::findAll(['order' => 'type']);
-        $this->data->userLevel = User::$level;
     }
 
     public function actionAddPortType($type)

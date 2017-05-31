@@ -83,7 +83,7 @@
                         <div class="col-sm-6">
                             <label for="">Модули</label>
                         </div>
-                        {% if userLevel > 2 %}
+                        {% if user.level > 2 %}
                         <div class="col-sm-1 col-sm-offset-4">
                             <button class="btn btn-xs btn-success" type="button" data-action="add-module">
                                 добавить
@@ -96,12 +96,12 @@
                     {% for currentModuleItem in current.modules %}
                         <div class="form-group">
                             <div class="col-xs-4">
-                                <select name="data[moduleItem][moduleId][]" id="id-module" class="form-control" title="modules list" {% if userLevel <= 2 %}disabled{% endif %}>
+                                <select name="data[moduleItem][moduleId][]" id="id-module" class="form-control" title="modules list" {% if user.level <= 2 %}disabled{% endif %}>
                                     {% for module in modules %}
                                         <option value="{{ module.getPK }}"{% if module.getPK == currentModuleItem.module.getPk %} selected {% endif %}>{{ module.title }}  ({{ module.vendor.title }})</option>
                                     {% endfor %}
                                 </select>
-                                {% if userLevel <= 2 %}
+                                {% if user.level <= 2 %}
                                     <input type="hidden" name="data[moduleItem][moduleId][]" value="{{ currentModuleItem.module.getPk }}">
                                 {% endif %}
                             </div>

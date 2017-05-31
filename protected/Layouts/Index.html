@@ -1,3 +1,6 @@
+{% if timer is defined and user.debugMode == true %}
+    {{ timer.fix('Twig render start') }}
+{% endif %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -106,5 +109,21 @@
     {% block JS %}
 
     {% endblock %}
+
+{#debug timer output#}
+
+{% if timer is defined and user.debugMode == true %}
+    {{ timer.fix('Twig render finish') }}
+    <div id="dialog-timer" title="Runtime Info">
+        {% for prop, value in timer %}
+        <p>{{ prop }} - {{ timer[prop] }}</p>
+        {% endfor %}
+    </div>
+    <script>
+        $( function() {
+            $( "#dialog-timer" ).dialog();
+        } );
+    </script>
+{% endif %}
 </body>
 </html>

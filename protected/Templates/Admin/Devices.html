@@ -89,7 +89,7 @@
                                 {#Action#}
                                 <td class="text-center" rowspan="{{ appliance.modules.count }}">
                                     <a class="btn btn-success btn-xs" href="/modal/editAppliance?id={{ appliance.getPK }}" role="button" data-action="get-popup"><span class="glyphicon glyphicon-pencil" aria-hidden="true" title="редактировать устройство"></span></a>
-                                    {% if userLevel > 2 %}
+                                    {% if user.level > 2 %}
                                     <a class="btn btn-danger btn-xs" href="/admin/delAppliance?id={{ appliance.getPK }}" role="button"
                                            data-action="delete"><span class="glyphicon glyphicon-trash" aria-hidden="true" title="удалить устройство"></span></a>
                                     {% endif %}

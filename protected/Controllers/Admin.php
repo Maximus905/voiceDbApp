@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Components\Parser;
+use App\Components\Timer;
 use App\Models\Address;
 use App\Models\Appliance;
 use App\Models\ApplianceType;
@@ -19,7 +20,6 @@ use App\Models\PlatformItem;
 use App\Models\Region;
 use App\Models\Software;
 use App\Models\SoftwareItem;
-use App\Models\User;
 use App\Models\Vendor;
 use App\Models\VPortType;
 use App\Models\Vrf;
@@ -31,6 +31,8 @@ use T4\Mvc\Controller;
 
 class Admin extends Controller
 {
+    use DebugTrait;
+
     public function actionDefault()
     {
 
@@ -914,11 +916,13 @@ class Admin extends Controller
 
     public function actionDevices()
     {
+        $timer = Timer::instance();
+        $timer->fix('start action');
         $this->data->offices = Office::findAll(['order' => 'title']);
         $this->data->regions = Region::findAll(['order' => 'title']);
         $this->data->activeLink->devices = true;
         $this->data->exportUrl = '/export/hardInvExcel';
-        $this->data->userLevel = User::$level;
+        $timer->fix('end action');
     }
 
     public function actionPortTypes()
@@ -1095,6 +1099,17 @@ class Admin extends Controller
                         ])
                         ->save();
                 }
+            }
+
+            // если указан management IP - создать data port
+            if (!empty($data->managementIp)) {
+                (new DataPort())->fill([
+                    'ipAddress' => $data->managementIp,
+                    'portType' => DPortType::findByType('Ethernet'),
+                    'appliance' => $appliance,
+                    'vrf' => Vrf::instanceGlobalVrf(),
+                    'isManagement' => true,
+                ])->save();
             }
 
             Appliance::getDbConnection()->commitTransaction();

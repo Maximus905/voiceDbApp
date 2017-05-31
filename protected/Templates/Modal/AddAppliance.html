@@ -70,12 +70,15 @@
 
                 <div class="form-group">
                     <label for="id-software" class="col-sm-3 control-label"></label>
-                    <div class="col-sm-4">
+                    <div class="col-sm-5">
                         <div class="input-group">
                             <span class="input-group-addon" id="hostname">hostname</span>
-                            <input type="text" class="form-control" name="data[hostname]" placeholder="hostname"
-                                   aria-describedby="hostname">
+                            <input type="text" class="form-control" name="data[hostname]" placeholder="hostname" aria-describedby="hostname">
                         </div>
+                    </div>
+                    <div class="col-sm-4 input-group">
+                        <span class="input-group-addon" id="id-mngmnt">management IP</span>
+                        <input type="text" class="form-control" name="data[managementIp]" placeholder="management IP" aria-describedby="management IP">
                     </div>
                 </div>
                 <!--add module items-->
@@ -109,7 +112,7 @@
                                     <input type="text" class="form-control" name="data[module][comment][]" placeholder="Комментарий">
                                 </div>
                                 <div class="col-xs-2 custom-box checkbox-container">
-                                    <input type="checkbox" id="item-id-{{ currentModuleItem.getPK }}" name="data[module][in-use][]" value="checked" checked>
+                                    <input type="checkbox" id="item-id-{{ currentModuleItem.getPK }}" name="data[module][inUse][]" value="checked" checked>
                                     <label class="icon-check-off" for="item-id-{{ currentModuleItem.getPK }}">In use</label>
                                 </div>
                             </div>
@@ -126,12 +129,11 @@
     </div>
     <script>
         var APP = APP || {};
-        APP.ctrlCheckbox();
         APP.popups = APP.popups || [];
         APP.popups.push({
             path: "{{ path }}",
             popupSelector: "#add-appliance",
-            width: "800"
+            width: "900"
         });
         $("button[data-action='add-module']").on(
                 "click",
@@ -139,6 +141,7 @@
                     event.preventDefault();
                     //console.log(APP);
                     $(APP.popups[APP.currentPopup.index].popupSelector + " .panel-body.js-add-module").prepend($("template.js-add-module").clone().html());
+                    APP.ctrlCheckbox();
                 }
         )
     </script>
