@@ -33,11 +33,11 @@ class Rclient extends Command
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
             $result =  json_decode(curl_exec($curl));
 
-//            $result =  curl_exec($curl);
-//            var_dump($result);
+            $result =  curl_exec($curl);
+            var_dump($result);
 
-            $statusCode = (400 == $result->httpStatusCode) ? ' Bad Request' : ' Accepted';
-            echo ' request ' . $n++ . '  ->  ' . $result->httpStatusCode  . $statusCode . PHP_EOL;
+//            $statusCode = (400 == $result->httpStatusCode) ? ' Bad Request' : ' Accepted';
+//            echo ' request ' . $n++ . '  ->  ' . $result->httpStatusCode  . $statusCode . PHP_EOL;
 
             curl_close($curl);
 //var_dump($result->errors);

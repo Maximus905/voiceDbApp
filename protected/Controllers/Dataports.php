@@ -21,7 +21,6 @@ class Dataports extends Controller
             $logger = new Logger('DS-dataports');
             $logger->pushHandler(new StreamHandler(ROOT_PATH . '/Logs/surveyOfAppliances.log', Logger::DEBUG));
 
-
             $dataSet = (new Std())->fill(json_decode(file_get_contents('php://input')));
 
             // Check the validity of the input dataset
@@ -65,10 +64,10 @@ class Dataports extends Controller
             }
 
             // Define VRF of the management IP
-            if ('global' == $dataSet->vrf_name) {
+            if ('global' == mb_strtolower($dataSetNetwork->vrf_name)) {
                 $vrf = Vrf::instanceGlobalVrf();
             }
-            if ('global' != $dataSet->vrf_name) {
+            if ('global' != mb_strtolower($dataSetNetwork->vrf_name)) {
                 $vrf = Vrf::findByColumn('name', $dataSet->vrf_name);
             }
             if (!($vrf instanceof Vrf)) {
@@ -78,7 +77,7 @@ class Dataports extends Controller
             // Find the dataport of the management IP by its VRF and IP
             $dataport = DataPort::findByIpVrf($dataSet->ip, $vrf);
             if (!($dataport instanceof DataPort)) {
-                throw new Exception(' this dataport does not exist');
+                throw new Exception('The management IP '. $dataSet->ip .' does not exist in the database');
             }
 
             // Find the appliance which has the dataport
@@ -89,14 +88,14 @@ class Dataports extends Controller
             foreach ($dataSet->networks as $dataSetNetwork) {
 
                 // Define VRF
-                if ('global' == $dataSetNetwork->vrf_name) {
+                if ('global' == mb_strtolower($dataSetNetwork->vrf_name)) {
                     $vrf = Vrf::instanceGlobalVrf();
                 }
-                if ('global' != $dataSetNetwork->vrf_name) {
+                if ('global' != mb_strtolower($dataSetNetwork->vrf_name)) {
                     $vrf = Vrf::findByColumn('name', $dataSetNetwork->vrf_name);
                 }
                 if (!($vrf instanceof Vrf)) {
-                    throw new Exception('Unknown VRF - ' . $dataSetNetwork->vrf_name);
+                    throw new Exception('Unknown VRF - ' . $dataSetNetwork->vrf_name . ' for ' . $dataSetNetwork->ip_address);
                 }
 
                 // Find the dataport by its VRF and IP
@@ -107,6 +106,7 @@ class Dataports extends Controller
                     $dataport->fill([
                         'appliance' => $appliance,
                         'vrf' => $vrf,
+                        'ipAddress' => $dataSetNetwork->ip_address,
                         'macAddress' => $dataSetNetwork->mac,
                         'details' => [
                             'portName' => $dataSetNetwork->interface
@@ -140,18 +140,18 @@ class Dataports extends Controller
             foreach ($appliance->dataPorts as $dbDataport) {
 
                 if (!$requestDataports->existsElement(['ipAddress' => $dbDataport->ipAddress])) {
-                    $logger->warning('[host]=' . $appliance->details['hostname'] . ' [manageIP]=' . $dataSet->ip . ' ->> ' . $dbDataport->ipAddress . ' das not in the query, but there is in the database');
+                    $logger->warning('[host]=' . $appliance->details['hostname'] . ' [manageIP]=' . $dataSet->ip . ' ->> ' . $dbDataport->ipAddress . ' does not in the query, but there is in the database');
                 }
             }
 
         } catch (MultiException $errs ) {
             foreach ($errs as $e) {
                 $err['errors'][] = $e->getMessage();
-                $logger->error('[host]=' . $appliance->details['hostname'] . ' [manageIP]=' . $dataSet->ip . ') ->> ' . $e->getMessage());
+                $logger->error('[host]=' . $appliance->details['hostname'] . ' [manageIP]=' . $dataSet->ip . ' ->> ' . $e->getMessage());
             }
         } catch (Exception $e) {
             $err['errors'][] = $e->getMessage();
-            $logger->error('[host]=' . $appliance->details['hostname'] . ' [manageIP]=' . $dataSet->ip . ') ->> ' . $e->getMessage());
+            $logger->error('[host]=' . $appliance->details['hostname'] . ' [manageIP]=' . $dataSet->ip . ' ->> ' . $e->getMessage());
         }
 
         // Вернуть ответ
