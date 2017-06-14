@@ -187,7 +187,7 @@ jQuery(function ($) {
     APP.currentPopup = APP.currentPopup || {};
     APP.ctrl = APP.ctrl || [];
     APP.body = APP.body || $('body');
-    APP.convertTime();
+    //APP.convertTime();
     APP.filterRegion();
     APP.body.on(
         "click",

@@ -22,17 +22,30 @@ class Test extends Controller
 
     public function actionDefault()
     {
-//        var_dump(DPortType::findAll());die;
-//        var_dump(Vendor::findAll());die;
-        var_dump(DPortType::getEmpty());die;
-        var_dump(DPortType::findByColumn('type',null));die;
-        /**
-         * @var ModuleItem $res
-         */
-        $res = ModuleItem::findAll()->first();
-        $res->serialNumber = '0';
-        $res->save();
-        var_dump($res);
+
+        $appliance = Appliance::findByPK(1407);
+        $appliance->fill(
+            [
+                'lastUpdate'=> (new \DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s P')
+//                'lastUpdate'=> (new \DateTime('now', new \DateTimeZone('Europe/Moscow')))->format('Y-m-d H:i:s P')
+//                'lastUpdate'=> (new \DateTime())->format('Y-m-d H:i:s')
+            ]
+        )->save();
+        var_dump(new \DateTime($appliance->lastUpdate));
+        echo '--------------------';
+
+        $appliance = Appliance::findByPK(1407);
+        var_dump(((new \DateTime($appliance->lastUpdate))->setTimezone(new \DateTimeZone('Europe/Moscow')))->format('Y-m-d H:i'));
+        var_dump((new \DateTime($appliance->lastUpdate))->setTimezone(new \DateTimeZone('Europe/Moscow')));
+        var_dump((new \DateTime($appliance->lastUpdate))->setTimezone(new \DateTimeZone('America/Toronto')));
+        var_dump((new \DateTime($appliance->lastUpdate))->setTimezone(new \DateTimeZone('America/Los_Angeles')));
+        echo '--------------------';
+
+        $lastUpdateDate = ((new \DateTime($appliance->lastUpdate))->setTimezone(new \DateTimeZone('Europe/Moscow')))->format('d.m.Y');
+        $lastUpdateDateTime = 'last update: ' . ((new \DateTime($appliance->lastUpdate))->setTimezone(new \DateTimeZone('Europe/Moscow')))->format('d.m.Y H:i \M\S\K(P)');
+
+        var_dump($lastUpdateDateTime);
+        var_dump($lastUpdateDate);
 
         die;
     }

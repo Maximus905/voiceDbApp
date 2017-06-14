@@ -369,7 +369,7 @@ class DataSetProcessor extends Std
             'vendor' => $vendor,
             'platform' => $platformItem,
             'software' => $softwareItem,
-            'lastUpdate' => (new \DateTime('now', new \DateTimeZone('Europe/Moscow')))->format('Y-m-d H:i:sP'),
+            'lastUpdate'=> (new \DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s P'),
             'details' => [
                 'hostname' => $hostname,
             ],
@@ -453,7 +453,7 @@ class DataSetProcessor extends Std
             'serialNumber' => $serialNumber,
             'appliance' => $appliance,
             'location' => $office,
-            'lastUpdate' => (new \DateTime('now', new \DateTimeZone('Europe/Moscow')))->format('Y-m-d H:i:sP'),
+            'lastUpdate'=> (new \DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s P'),
         ])->save();
 
         return $moduleItem;
