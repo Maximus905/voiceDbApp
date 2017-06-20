@@ -182,11 +182,15 @@ class Modal extends Controller
         $this->data->portTypes = DPortType::findAll(['order' => 'type']);
         $this->data->vrfs = Vrf::findAll();
         $this->data->gvrf = Vrf::instanceGlobalVrf();
-        $this->data->dataPorts = $this->data->current->dataPorts->uasort(
-            function ($a, $b) {
-                return $a->details->portName <=> $b->details->portName;
-            }
-        );
+        if (0 < $this->data->current->dataPorts->count()) {
+            $this->data->dataPorts = $this->data->current->dataPorts->uasort(
+                function ($a, $b) {
+                    return $a->details->portName <=> $b->details->portName;
+                }
+            );
+        } else {
+            $this->data->dataPorts = $this->data->current->dataPorts;
+        }
     }
 
     public function actionAddPortType($type)

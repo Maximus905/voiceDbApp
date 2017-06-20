@@ -135,4 +135,18 @@ class Appliance extends Model
 
         return false;
     }
+
+    /**
+     * @param string $vendorTitle
+     * @param string $platformSerial
+     * @return Appliance|bool
+     */
+    public static function findByVendorTitlePlatformSerial(string $vendorTitle, string $platformSerial)
+    {
+        return (self::findAll())->filter(
+            function($appliance) use ($vendorTitle, $platformSerial) {
+                return $vendorTitle == $appliance->vendor->title && $platformSerial == $appliance->platform->serialNumber;
+            }
+        )->first();
+    }
 }

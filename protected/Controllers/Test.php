@@ -24,6 +24,51 @@ class Test extends Controller
 
     public function actionDefault()
     {
+        $appliance = (DataPort::findByIpVrf('10.100.240.211', Vrf::instanceGlobalVrf()))->appliance;
+        var_dump($appliance);
+        die;
+
+        $appliance = Appliance::findByVendorTitlePlatformSerial('CISCO', 'FOC0935368D');
+        var_dump($appliance);
+        die;
+
+        $appliance = Appliance::findAll();
+        var_dump(($appliance->first())->platform->serialNumber);
+        die;
+
+        $ap = new Appliance();
+
+        var_dump('type ->>');
+        var_dump($ap->type);
+
+        var_dump('location ->>');
+        var_dump($ap->location);
+
+        var_dump('cluster ->>');
+        var_dump($ap->cluster);
+
+        var_dump('vendor ->>');
+        var_dump($ap->vendor);
+
+        var_dump('platform ->>');
+        var_dump($ap->platform);
+
+        var_dump('software ->>');
+        var_dump($ap->software);
+
+        var_dump('voicePorts ->>');
+        var_dump($ap->voicePorts);
+
+        var_dump('dataPorts ->>');
+        var_dump($ap->dataPorts);
+
+        var_dump('modules ->>');
+        var_dump($ap->modules);
+
+
+        die;
+
+
         $ip = (new IpTools('192.168.1.0', '255.255.255.0'));
         echo 'object:';
         var_dump($ip);
