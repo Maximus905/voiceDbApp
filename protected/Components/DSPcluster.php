@@ -11,6 +11,7 @@ class DSPcluster extends Std
 {
     protected $dataSet;
     protected $firstClusterAppliance = true;
+    protected $debugLogger;
 
 
     /**
@@ -20,11 +21,14 @@ class DSPcluster extends Std
     public function __construct($dataSet = null)
     {
         $this->dataSet = $dataSet;
+        $this->debugLogger = RLogger::getInstance('DSPcluster', realpath(ROOT_PATH . '/Logs/debug.log'));
     }
 
 
     public function run()
     {
+        $this->debugLogger->info('START: ' . '[ip]=' . $this->dataSet->ip);
+
         $this->verifyDataSet();
 
         $cluster = Cluster::findByTitle($this->dataSet->hostname);
@@ -35,6 +39,7 @@ class DSPcluster extends Std
                 ])
                 ->save();
         }
+        $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [cluster]=' . $cluster->title);
 
         foreach ($this->dataSet->clusterAppliances as $dataSetClusterAppliance) {
 
@@ -49,6 +54,8 @@ class DSPcluster extends Std
                 $this->firstClusterAppliance = false;
             }
         }
+
+        $this->debugLogger->info('END: ' . '[ip]=' . $this->dataSet->ip);
 
         return true;
     }

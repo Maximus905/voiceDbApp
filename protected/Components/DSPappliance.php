@@ -1,6 +1,7 @@
 <?php
 namespace App\Components;
 
+use App\Exceptions\DblockException;
 use App\Models\Appliance;
 use App\Models\ApplianceType;
 use App\Models\Cluster;
@@ -23,14 +24,16 @@ use T4\Core\Std;
 
 class DSPappliance extends Std
 {
-    const SLEEPTIME = 100000; // микросекунды
-    const ITERATIONS = 520; // Колличество попыток получить доступ к db.lock файлу
+    const SLEEPTIME = 500; // микросекунды
+    const ITERATIONS = 6000000; // Колличество попыток получить доступ к db.lock файлу
     const DBLOCKFILE = ROOT_PATH_PROTECTED . '/db.lock';
 
     protected $dataSet;
     protected $appliance;
     protected $cluster;
     protected $dbLockFile;
+    protected $debugLogger;
+
 
     /**
      * DSPappliance constructor.
@@ -41,6 +44,7 @@ class DSPappliance extends Std
     {
         $this->dataSet = $dataSet;
         $this->cluster = $cluster;
+        $this->debugLogger = RLogger::getInstance('DSPappliance', realpath(ROOT_PATH . '/Logs/debug.log'));
     }
 
 
@@ -50,13 +54,16 @@ class DSPappliance extends Std
      */
     public function run()
     {
+        $this->debugLogger->info('START: ' . '[ip]=' . $this->dataSet->ip);
+
         $this->verifyDataSet();
         $this->beforeProcessDataSet();
 
         try {
+
             // Заблокировать DB на запись
             if (false === $this->dbLock()) {
-                throw new Exception('Can not get the lock file');
+                throw new DblockException('Can not get the lock file');
             }
 
             Appliance::getDbConnection()->beginTransaction();
@@ -65,6 +72,8 @@ class DSPappliance extends Std
             if (!($office instanceof Office)) {
                 throw new Exception('Location not found, LotusId = ' . $this->dataSet->LotusId);
             }
+
+            $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [office]=' . $office->title);
 
             /**
              * << Варианты устройств в БД >>
@@ -79,6 +88,10 @@ class DSPappliance extends Std
             if (!empty($this->dataSet->platformSerial)) {
                 $this->appliance = Appliance::findByVendorTitlePlatformSerial($this->dataSet->platformVendor, $this->dataSet->platformSerial);
             }
+            if ($this->appliance instanceof Appliance) {
+                $vendor = $this->appliance->vendor;
+                $platform = $this->appliance->platform->platform;
+            }
 
             // Case "Find appliance by management IP"
             if (!($this->appliance instanceof Appliance) && !empty($this->dataSet->ip)) {
@@ -91,12 +104,24 @@ class DSPappliance extends Std
                 $this->appliance = new Appliance();
             }
 
-            $vendor = $this->processVendorDataSet();
-            $platform = $this->processPlatformDataSet($vendor ,$this->dataSet->chassis);
+            $vendor = $vendor ?? $this->processVendorDataSet();
+            $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [vendor]=' . $vendor->title);
+
+            $platform = $platform ?? $this->processPlatformDataSet($vendor ,$this->dataSet->chassis);
+            $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [platform]=' . $platform->title);
+
             $platformItem = $this->processPlatformItemDataSet($platform ,$this->dataSet->platformSerial);
+            $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [platformItem]=' . $platformItem->serialNumber);
+
             $software = $this->processSoftwareDataSet($vendor ,$this->dataSet->applianceSoft);
+            $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [software]=' . $software->title);
+
             $softwareItem = $this->processSoftwareItemDataSet($software ,$this->dataSet->softwareVersion);
+            $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [softwareItem]=' . $softwareItem->version);
+
             $applianceType = $this->processApplianceTypeDataSet($this->dataSet->applianceType);
+            $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [applianceType]=' . $applianceType->type);
+
             $this->appliance->fill([
                 'cluster' => $this->cluster,
                 'location' => $office,
@@ -109,6 +134,8 @@ class DSPappliance extends Std
                     'hostname' => $this->dataSet->hostname,
                 ],
             ])->save();
+            $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [appliance]=' . $this->dataSet->hostname);
+
             $usedModules = $this->processUsedModulesDataSet($vendor, $office);
             $this->processNotUsedModulesDataSet($usedModules);
             if (!empty($this->dataSet->ip)) {
@@ -121,7 +148,12 @@ class DSPappliance extends Std
         } catch (Exception $e) {
             Appliance::getDbConnection()->rollbackTransaction();
             throw new Exception($e->getMessage());
+        } catch (DblockException $e) {
+            throw new Exception($e->getMessage());
         }
+
+
+        $this->debugLogger->info('END: ' . '[ip]=' . $this->dataSet->ip);
 
         return true;
     }
@@ -223,12 +255,15 @@ class DSPappliance extends Std
      */
     protected function processSoftwareItemDataSet(Software $software, $version)
     {
-        $softwareItem = ($this->appliance->software instanceof SoftwareItem) ? $this->appliance->software : (new SoftwareItem());
+        $softwareItem = SoftwareItem::findBySoftwareVersion($software, $version);
 
-        $softwareItem->fill([
-            'software' => $software,
-            'version' => $version
-        ])->save();
+        if (!($softwareItem instanceof SoftwareItem)) {
+            $softwareItem = (new SoftwareItem())
+                ->fill([
+                    'software' => $software,
+                    'version' => $version
+                ])->save();
+        }
 
         return $softwareItem;
     }
@@ -265,6 +300,9 @@ class DSPappliance extends Std
         foreach ($this->dataSet->applianceModules as $moduleDataSet) {
             $module = $this->processModuleDataSet($vendor, $moduleDataSet->product_number, $moduleDataSet->description);
             $moduleItem = $this->processModuleItemDataSet($office, $module, $moduleDataSet->serial);
+
+            $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [useModule]=' . $moduleItem->serialNumber);
+
             $usedModules->add($moduleItem);
         }
 
@@ -333,6 +371,8 @@ class DSPappliance extends Std
                     $dbModule->notFound();
                     $dbModule->notUse();
                     $dbModule->save();
+
+                    $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [notUsedModule]=' . $dbModule->serialNumber);
                 }
             }
         }
@@ -343,6 +383,8 @@ class DSPappliance extends Std
         $ipAddress = (new IpTools($this->dataSet->ip))->address;
 
         $vrf = $this->processVrfDataSet();
+        $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [vrf]=' . $vrf->name);
+
         $dataPort = DataPort::findByIpVrf($ipAddress, $vrf);
 
         if ($dataPort instanceof DataPort) {
@@ -364,6 +406,8 @@ class DSPappliance extends Std
                 'isManagement' => true,
             ])->save();
         }
+
+        $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [dataPort]=' . $dataPort->ipAddress);
     }
 
     /**

@@ -25,11 +25,13 @@ class RServer extends Controller
 
     public function actionDefault()
     {
+        $debugLogger = RLogger::getInstance('RServer', realpath(ROOT_PATH . '/Logs/debug.log'));
+
         try {
             $rawInput = file_get_contents('php://input');
             $inputDataset = (new Std())->fill(json_decode($rawInput));
 
-            $logger = RLogger::getInstance('RServer');
+            $logger = RLogger::getInstance('R-Server');
 
             if (0 == count($inputDataset)) {
                 throw new Exception('DATASET: Not a valid JSON format or empty an input dataset');
@@ -37,6 +39,8 @@ class RServer extends Controller
             if (empty($inputDataset->dataSetType)) {
                 throw new Exception('DATASET: No field dataSetType or empty dataSetType');
             }
+
+            $debugLogger->info('START: ' . '[ip]=' . $inputDataset->ip . '; [dataSetType]=' . $inputDataset->dataSetType);
 
             switch ($inputDataset->dataSetType) {
                 case 'appliance':
@@ -71,12 +75,19 @@ class RServer extends Controller
             foreach ($errs as $e) {
                 $err['errors'][] = $e->getMessage();
                 $logger->error('[host]=' . ($inputDataset->hostname ?? '""') . ' [manageIP]=' . ($inputDataset->ip ?? '""') . ' [message]=' . ($e->getMessage() ?? '""') . ' [dataset]=' . $rawInput);
+
+                $debugLogger->error('rserver: ' . '[ip]=' . $inputDataset->ip . '; [error]=' . ($e->getMessage() ?? '""') . '; [dataset]=' . $rawInput);
+
             }
         } catch (Exception $e) {
             $err['errors'][] = $e->getMessage();
             $logger->error('[host]=' . ($inputDataset->hostname ?? '""') . ' [manageIP]=' . ($inputDataset->ip ?? '""') . ' [message]=' . ($e->getMessage() ?? '""') . ' [dataset]=' . $rawInput);
+
+            $debugLogger->error('rserver: ' . '[ip]=' . $inputDataset->ip . '; [error]=' . ($e->getMessage() ?? '""') . '; [dataset]=' . $rawInput);
         }
 
+        $debugLogger->info('END: ' . '[ip]=' . $inputDataset->ip . '; [dataSetType]=' . $inputDataset->dataSetType);
+        $debugLogger->info('---------------------------------------');
 
         // Вернуть ответ
         $httpStatusCode = (isset($err)) ? 400 : 202;
