@@ -104,9 +104,6 @@ class DSPappliance extends Std
                         // ЕСЛИ $this->dataSet->ip привязан к другому пустому appliance
                         if ($appliance->getPk() != $this->appliance->getPk() && empty(trim($appliance->platform->serialNumber))) {
                             // ТО Удалим это пустое appliance
-                            foreach ($appliance->dataPorts as $dataPort) {
-                                $dataPort->delete();
-                            }
                             $appliance->delete();
                         }
                     }
