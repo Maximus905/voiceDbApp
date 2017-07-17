@@ -994,16 +994,21 @@ class Admin extends Controller
             'ven' => ['clause' => '"platformVendor_id" = :platformVendor_id', 'param' => ':platformVendor_id']
 
         ];
+
         $http = new Request;
         $this->data->url = new UrlExt($http->url->toArrayRecursive());
         $where = [];
         $params = [];
         $order = GeoDevModulePort_View::sortOrder();
+        $maxAge = 73;
 
         if (0 == $http->get->count()) {
             $order = GeoDevModulePort_View::sortOrder();
         } else {
             $getParams = new Std($getParams);
+            if (isset($http->get->maxAge)) {
+                $maxAge = $http->get->maxAge;
+            }
 //            var_dump($getParams);die;
             foreach ($http->get as $key => $val) {
                 if (! isset($getParams->$key)) {
@@ -1028,7 +1033,7 @@ class Admin extends Controller
         $this->data->geoDevs = GeoDevModulePort_View::findAllByQuery($query);
         $this->data->navbar->count = $this->data->geoDevs->count();
         $this->data->exportUrl = '/export/hardInvExcel';
-        $this->data->maxAge = 73;
+        $this->data->maxAge = $maxAge;
         $this->data->activeLink->devices = true;
         $timer->fix('end action');
     }
