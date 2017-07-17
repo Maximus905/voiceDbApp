@@ -206,11 +206,9 @@ class Appliance extends Model
         foreach ($this->dataPorts as $dataPort) {
             $dataPort->delete();
         }
-        $softwareItem = $this->software;
-        $platformItem = $this->platform;
         $result = parent::delete();
-        $softwareItem->delete();
-        $platformItem->delete();
+        $this->software->delete();
+        $this->platform->delete();
 
         return $result;
     }
