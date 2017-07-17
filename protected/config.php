@@ -16,5 +16,9 @@ return [
             'password' => '',
             'dbname' => 'phpUnitTest'
         ]
+    ],
+    'axl' => [
+        'username' => '',
+        'password' => '',
     ]
 ];

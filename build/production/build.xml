@@ -48,6 +48,8 @@
                     <token key="db.password" value="${db.password}" />
                     <token key="db.productionDb" value="${db.productionDb}" />
                     <token key="db.unitTestDb" value="${db.unitTestDb}" />
+                    <token key="axl.username" value="${axl.username}" />
+                    <token key="axl.password" value="${axl.password}" />
                 </replacetokens>
             </filterchain>
         </copy>

@@ -39,11 +39,13 @@ class DSPappliance extends Std
     /**
      * DSPappliance constructor.
      * @param null $dataSet
+     * @param Appliance|null $appliance
      * @param Cluster|null $cluster
      */
-    public function __construct($dataSet = null, Cluster $cluster = null)
+    public function __construct($dataSet = null, Appliance $appliance = null, Cluster $cluster = null)
     {
         $this->dataSet = $dataSet;
+        $this->appliance = $appliance;
         $this->cluster = $cluster;
 //        $this->debugLogger = RLogger::getInstance('DSPappliance', realpath(ROOT_PATH . '/Logs/debug.log'));
     }
@@ -52,7 +54,6 @@ class DSPappliance extends Std
     /**
      * @return bool
      * @throws Exception
-     * @throws LocationException
      */
     public function run()
     {
@@ -86,13 +87,27 @@ class DSPappliance extends Std
              */
 
             // Case "Find appliance by platformSerial"
-            if (!empty($this->dataSet->platformSerial)) {
+            if (!($this->appliance instanceof Appliance)) {
                 $this->appliance = Appliance::findByVendorTitlePlatformSerial($this->dataSet->platformVendor, $this->dataSet->platformSerial);
-            }
-            if ($this->appliance instanceof Appliance) {
-                $vendor = $this->appliance->vendor;
-                $platform = $this->appliance->platform->platform;
-                $platformItem = $this->appliance->platform;
+
+                // Нашли по серийнику appliance, значит нашли его $vendor, $platform, $platformItem.
+                if ($this->appliance instanceof Appliance) {
+                    $vendor = $this->appliance->vendor;
+                    $platform = $this->appliance->platform->platform;
+                    $platformItem = $this->appliance->platform;
+
+                    // Проверим к какому appliance привязан $this->dataSet->ip.
+                    if (!empty($this->dataSet->ip)) {
+                        $managementIP = (new IpTools($this->dataSet->ip))->address;
+                        $appliance = (DataPort::findByIpVrf($managementIP, Vrf::instanceGlobalVrf()))->appliance;
+
+                        // ЕСЛИ $this->dataSet->ip привязан к другому пустому appliance
+                        if ($appliance->getPk() != $this->appliance->getPk() && empty(trim($appliance->platform->serialNumber))) {
+                            // ТО Удалим это пустое appliance
+                            $appliance->delete();
+                        }
+                    }
+                }
             }
 
             // Case "Find appliance by management IP"
@@ -173,6 +188,11 @@ class DSPappliance extends Std
         return true;
     }
 
+
+    public function returnAppliance()
+    {
+        return (true === $this->run()) ? $this->appliance : false;
+    }
 
     protected function beforeProcessDataSet()
     {

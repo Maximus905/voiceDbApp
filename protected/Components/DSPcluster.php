@@ -46,11 +46,11 @@ class DSPcluster extends Std
             // IP address прописываем только у первого Appliance, входящего в состав кластера
             if (true !== $this->firstClusterAppliance) {
                 $dataSetClusterAppliance->ip = '';
-                (new DSPappliance($dataSetClusterAppliance, $cluster))->run();
+                (new DSPappliance($dataSetClusterAppliance, null, $cluster))->run();
             }
 
             if (true === $this->firstClusterAppliance) {
-                $ap = (new DSPappliance($dataSetClusterAppliance, $cluster))->run();
+                $ap = (new DSPappliance($dataSetClusterAppliance, null, $cluster))->run();
                 $this->firstClusterAppliance = false;
             }
         }

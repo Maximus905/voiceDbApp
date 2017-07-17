@@ -25,6 +25,7 @@ use T4\Orm\Model;
  * @property Collection|VoicePort[] $voicePorts
  * @property Collection|DataPort[] $dataPorts
  * @property Collection|ModuleItem[] $modules
+ * @property PhoneInfo $phoneInfo
  */
 class Appliance extends Model
 {
@@ -45,7 +46,8 @@ class Appliance extends Model
             'software' => ['type' => self::BELONGS_TO, 'model' => SoftwareItem::class, 'by' => '__software_item_id'],
             'voicePorts' => ['type' => self::HAS_MANY, 'model' => VoicePort::class],
             'dataPorts' => ['type' => self::HAS_MANY, 'model' => DataPort::class],
-            'modules' => ['type' => self::HAS_MANY, 'model' => ModuleItem::class]
+            'modules' => ['type' => self::HAS_MANY, 'model' => ModuleItem::class],
+            'phoneInfo' => ['type' => self::HAS_ONE, 'model' => PhoneInfo::class],
         ]
     ];
 
@@ -150,5 +152,64 @@ class Appliance extends Model
                 return $vendorTitle == $appliance->vendor->title && $platformSerial == $appliance->platform->serialNumber;
             }
         )->first();
+    }
+
+    /**
+     * @param string $type
+     * @param string $platformSerial
+     * @return Appliance|bool
+     */
+    public static function findByTypeSerial(string $type, string $platformSerial)
+    {
+        return (self::findAll())->filter(
+            function($appliance) use ($type, $platformSerial) {
+                return $type == $appliance->type->type && $platformSerial == $appliance->platform->serialNumber;
+            }
+        )->first();
+    }
+
+    /**
+     * @param string $type
+     * @return Collection Appliance|bool
+     */
+    public static function findAllByType(string $type)
+    {
+        return (self::findAll())->filter(
+            function($appliance) use ($type) {
+                return $type == $appliance->type->type;
+            }
+        );
+    }
+
+    /**
+     * @param string $ip
+     * @return Appliance|bool
+     */
+    public static function findByManagementIP(string $ip)
+    {
+        return (Appliance::findAll())->filter(
+            function($appliance) use($ip) {
+                return $ip == $appliance->getManagementIp();
+            }
+        )->first();
+    }
+
+    public function delete()
+    {
+        if ($this->isNew()) {
+            return false;
+        }
+
+        foreach ($this->modules as $module) {
+            $module->delete();
+        }
+        foreach ($this->dataPorts as $dataPort) {
+            $dataPort->delete();
+        }
+        $result = parent::delete();
+        $this->software->delete();
+        $this->platform->delete();
+
+        return $result;
     }
 }

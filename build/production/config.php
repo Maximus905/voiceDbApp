@@ -16,5 +16,9 @@ return [
             'password' => '{{db.password}}',
             'dbname' => '{{db.unitTestDb}}'
         ]
+    ],
+    'axl' => [
+        'username' => '{{axl.username}}',
+        'password' => '{{axl.password}}',
     ]
 ];
