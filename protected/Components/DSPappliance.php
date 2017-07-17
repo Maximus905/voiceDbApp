@@ -89,10 +89,24 @@ class DSPappliance extends Std
             // Case "Find appliance by platformSerial"
             if (!($this->appliance instanceof Appliance)) {
                 $this->appliance = Appliance::findByVendorTitlePlatformSerial($this->dataSet->platformVendor, $this->dataSet->platformSerial);
+
+                // Нашли по серийнику appliance, значит нашли его $vendor, $platform, $platformItem.
                 if ($this->appliance instanceof Appliance) {
                     $vendor = $this->appliance->vendor;
                     $platform = $this->appliance->platform->platform;
                     $platformItem = $this->appliance->platform;
+
+                    // Проверим к какому appliance привязан $this->dataSet->ip.
+                    if (!empty($this->dataSet->ip)) {
+                        $managementIP = (new IpTools($this->dataSet->ip))->address;
+                        $appliance = (DataPort::findByIpVrf($managementIP, Vrf::instanceGlobalVrf()))->appliance;
+
+                        // ЕСЛИ $this->dataSet->ip привязан к другому пустому appliance
+                        if ($appliance->getPk() != $this->appliance->getPk() && empty(trim($appliance->platform->serialNumber))) {
+                            // ТО Удалим это пустое appliance
+                            $appliance->delete();
+                        }
+                    }
                 }
             }
 

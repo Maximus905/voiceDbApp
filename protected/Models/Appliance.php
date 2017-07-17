@@ -193,4 +193,23 @@ class Appliance extends Model
             }
         )->first();
     }
+
+    public function delete()
+    {
+        if ($this->isNew()) {
+            return false;
+        }
+
+        foreach ($this->modules as $module) {
+            $module->delete();
+        }
+        foreach ($this->dataPorts as $dataPort) {
+            $dataPort->delete();
+        }
+        $result = parent::delete();
+        $this->software->delete();
+        $this->platform->delete();
+
+        return $result;
+    }
 }
