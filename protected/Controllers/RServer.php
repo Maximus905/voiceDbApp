@@ -6,6 +6,7 @@ use App\Components\DSPcluster;
 use App\Components\DSPerror;
 use App\Components\DSPprefixes;
 use App\Components\RLogger;
+use App\Models\Appliance;
 use T4\Core\Collection;
 use T4\Core\Exception;
 use T4\Core\MultiException;
@@ -46,6 +47,9 @@ class RServer extends Controller
                 case 'appliance':
                     $logger = RLogger::getInstance('DS-appliance');
                     $result = (new DSPappliance($inputDataset))->run();
+                    if (!($result instanceof Appliance)) {
+                        throw new Exception('Runtime error');
+                    }
                     break;
 
                 case 'cluster':

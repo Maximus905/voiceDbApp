@@ -52,7 +52,7 @@ class DSPappliance extends Std
 
 
     /**
-     * @return bool
+     * @return Appliance
      * @throws Exception
      */
     public function run()
@@ -89,10 +89,24 @@ class DSPappliance extends Std
             // Case "Find appliance by platformSerial"
             if (!($this->appliance instanceof Appliance)) {
                 $this->appliance = Appliance::findByVendorTitlePlatformSerial($this->dataSet->platformVendor, $this->dataSet->platformSerial);
+
+                // Нашли по серийнику appliance, значит нашли его $vendor, $platform, $platformItem.
                 if ($this->appliance instanceof Appliance) {
                     $vendor = $this->appliance->vendor;
                     $platform = $this->appliance->platform->platform;
                     $platformItem = $this->appliance->platform;
+
+                    // Проверим к какому appliance привязан $this->dataSet->ip.
+                    if (!empty($this->dataSet->ip)) {
+                        $managementIP = (new IpTools($this->dataSet->ip))->address;
+                        $appliance = (DataPort::findByIpVrf($managementIP, Vrf::instanceGlobalVrf()))->appliance;
+
+                        // ЕСЛИ $this->dataSet->ip привязан к другому пустому appliance
+                        if ($appliance->getPk() != $this->appliance->getPk() && empty(trim($appliance->platform->serialNumber))) {
+                            // ТО Удалим это пустое appliance
+                            $appliance->delete();
+                        }
+                    }
                 }
             }
 
@@ -171,13 +185,7 @@ class DSPappliance extends Std
 
 //        $this->debugLogger->info('END: ' . '[ip]=' . $this->dataSet->ip);
 
-        return true;
-    }
-
-
-    public function returnAppliance()
-    {
-        return (true === $this->run()) ? $this->appliance : false;
+        return $this->appliance;
     }
 
     protected function beforeProcessDataSet()
@@ -430,6 +438,7 @@ class DSPappliance extends Std
         if ($dataPort instanceof DataPort) {
             $dataPort->fill([
                 'appliance' => $this->appliance,
+                'macAddress' => ($this->dataSet->macAddress) ?? '',
                 'vrf' => $vrf,
                 'isManagement' => true,
             ])->save();
@@ -440,6 +449,7 @@ class DSPappliance extends Std
 
             (new DataPort())->fill([
                 'ipAddress' => $ipAddress,
+                'macAddress' => ($this->dataSet->macAddress) ?? '',
                 'portType' => $portType,
                 'appliance' => $this->appliance,
                 'vrf' => $vrf,
