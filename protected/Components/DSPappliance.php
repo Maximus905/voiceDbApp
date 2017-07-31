@@ -113,14 +113,17 @@ class DSPappliance extends Std
             // Case "Find appliance by management IP"
             if (!($this->appliance instanceof Appliance) && !empty($this->dataSet->ip)) {
                 $managementIP = (new IpTools($this->dataSet->ip))->address;
-                $appliance = (DataPort::findByIpVrf($managementIP, Vrf::instanceGlobalVrf()))->appliance;
-                if (empty(trim($appliance->platform->serialNumber))) {
-                    $this->appliance = $appliance;
-                }
-                if (!empty(trim($appliance->platform->serialNumber))) {
-                    $appliance->fill([
-                        'inUse' => false,
-                    ])->save();
+                $dataPort = DataPort::findByIpVrf($managementIP, Vrf::instanceGlobalVrf());
+                if (false !== $dataPort) {
+                    $appliance = $dataPort->appliance;
+                    if (empty(trim($appliance->platform->serialNumber))) {
+                        $this->appliance = $appliance;
+                    }
+                    if (!empty(trim($appliance->platform->serialNumber))) {
+                        $appliance->fill([
+                            'inUse' => false,
+                        ])->save();
+                    }
                 }
             }
 
@@ -430,6 +433,11 @@ class DSPappliance extends Std
     {
         $ipAddress = (new IpTools($this->dataSet->ip))->address;
 
+        if (isset($this->dataSet->subNetMask)) {
+            $result = (new IpTools($ipAddress, $this->dataSet->subNetMask))->masklen;
+            $masklen = (false != $result) ? $result : null;
+        }
+
         $vrf = $this->processVrfDataSet();
 //        $this->debugLogger->info('process: ' . '[ip]=' . $this->dataSet->ip . '; [vrf]=' . $vrf->name);
 
@@ -441,6 +449,7 @@ class DSPappliance extends Std
                 'macAddress' => ($this->dataSet->macAddress) ?? '',
                 'vrf' => $vrf,
                 'isManagement' => true,
+                'masklen' => $masklen,
             ])->save();
         }
 
@@ -454,6 +463,7 @@ class DSPappliance extends Std
                 'appliance' => $this->appliance,
                 'vrf' => $vrf,
                 'isManagement' => true,
+                'masklen' => $masklen,
             ])->save();
         }
 

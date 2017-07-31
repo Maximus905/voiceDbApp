@@ -3,8 +3,10 @@ namespace App\Models;
 
 use App\Components\AxlClient;
 use App\Components\DSPappliance;
+use App\Components\IpTools;
 use App\Components\RisPortClient;
 use App\Components\RLogger;
+use Sunra\PhpSimple\HtmlDomParser;
 use T4\Core\Collection;
 use T4\Core\Exception;
 use T4\Core\Std;
@@ -33,21 +35,21 @@ class Phone extends Appliance
 
 
     /**
-     * @param string $ip
+     * @param string $cucmIp
      * @return Collection
      */
-    public static function getAllFromCucm(string $ip)
+    public static function getAllFromCucm(string $cucmIp)
     {
         $logger = RLogger::getInstance('Phone', realpath(ROOT_PATH . '/Logs/debug.log'));
 
         // Get list of all subscribers and publisher in the cluster
-        $listAllProcessNodes = self::getListAllCucmNodes($ip);
+        $listAllProcessNodes = self::getListAllCucmNodes($cucmIp);
 
         // Получить данные по телефонам из cucm используя AXL
-        $axlPhones = self::getAllFromCucmAxl($ip);
+        $axlPhones = self::getAllFromCucmAxl($cucmIp);
 
         // Получить данные по зарегистрированным телефонам из cucm используя RisPort
-        $registeredPhones = self::getAllFromCucmRis($ip, $axlPhones, $listAllProcessNodes);
+        $registeredPhones = self::getAllFromCucmRis($cucmIp, $axlPhones, $listAllProcessNodes);
 
         // Добавить недостающие поля из AxlPhones в зарегистрированные телефоны из RisPhones
         foreach ($registeredPhones as $phone) {
@@ -55,36 +57,37 @@ class Phone extends Appliance
 
             if (!is_null($axlPhone)) {
                 $phone->fill([
-                    'css' => $axlPhone->css,
-                    'devicePool' => $axlPhone->dpool,
-                    'prefix' => $axlPhone->prefix,
-                    'phoneDN' => $axlPhone->dnorpattern,
-                    'alertingName' => $axlPhone->fio,
-                    'partition' => $axlPhone->pt,
-                    'model' => $axlPhone->type,
+                    'css' => trim($axlPhone->css),
+                    'devicePool' => trim($axlPhone->dpool),
+                    'prefix' => trim($axlPhone->prefix),
+                    'phoneDN' => trim($axlPhone->dnorpattern),
+                    'alertingName' => trim($axlPhone->fio),
+                    'partition' => trim($axlPhone->pt),
+                    'model' => trim($axlPhone->type),
                 ]);
             } else {
-                $logger->info('PHONE: ' . '[name]=' . $phone->ipAddress . ' is not found in AXL');
+                $logger->info('PHONE: ' . '[name]=' . $phone->name . ' [ip]=' . $phone->ipAddress . ' [publisher]=' . $cucmIp . ' [message]=It is not found in AXL on the publisher');
             }
         }
 
-        // Опросить кажждый телефон по его IP через WEB Interface - DeviceInformationX
+        // Опросить кажждый телефон по его IP через WEB Interface
         foreach ($registeredPhones as $phone) {
-            $phoneData = simplexml_load_file('http://' . $phone->ipAddress . '/DeviceInformationX');
-            if (false !== $phoneData) {
-                $phone->fill([
-                    'macAddress' => $phoneData->MACAddress->__toString(),
-                    'serialNumber' => $phoneData->serialNumber->__toString(),
-                    'modelNumber' => $phoneData->modelNumber->__toString(),
-                    'versionID' => $phoneData->versionID->__toString(),
-                    'appLoadID' => $phoneData->appLoadID->__toString(),
-                ]);
-            } else {
-                $logger->info('PHONE: ' . '[name]=' . $phone->ipAddress . ' does not have web access');
+            // ------------------- DeviceInformationX -------------------------------------
+            if (false === $phone->getDataFromWebDevInfo()) {
+                $logger->info('PHONE: ' . '[name]=' . $phone->name . ' [ip]=' . $phone->ipAddress . ' [publisher]=' . $cucmIp . ' [message]=It does not have web access');
+                continue;
+            }
+            // ------------------- NetworkConfigurationX -------------------------------------
+            if (false === $phone->getDataFromWebNetConf()) {
+                $logger->info('PHONE: ' . '[model]=' . $phone->model . ' [ip]=' . $phone->ipAddress . ' [publisher]=' . $cucmIp . ' [message]=It does not have web access by HTML for NetworkConfiguration');
+            }
+            // ------------------- PortInformationX -------------------------------------
+            if (false === $phone->getDataFromWebPortInfo()) {
+                $logger->info('PHONE: ' . '[model]=' . $phone->model . ' [ip]=' . $phone->ipAddress . ' [publisher]=' . $cucmIp . ' [message]=It does not have web access by HTML for PortInformation');
             }
         }
 
-        // Возвращать только те телефоны по которым были ответы от AXL, RIS, WEB
+        // Возвращать только те телефоны по которым были ответы от AXL, RIS, DeviceInformationX
         return $registeredPhones->filter(
             function ($phone) {
                 return isset($phone->versionID) && isset($phone->model) && isset($phone->ipAddress);
@@ -94,8 +97,193 @@ class Phone extends Appliance
 
 
     /**
+     * @return $this|bool
+     */
+    protected function getDataFromWebDevInfo()
+    {
+        if (isset($this->ipAddress)) {
+            $phoneData = simplexml_load_file('http://' . $this->ipAddress . '/DeviceInformationX');
+
+            if (false === $phoneData) {
+                return false;
+            }
+
+            $this->fill([
+                'macAddress' => trim($phoneData->MACAddress->__toString()),
+                'serialNumber' => trim($phoneData->serialNumber->__toString()),
+                'modelNumber' => trim($phoneData->modelNumber->__toString()),
+                'versionID' => trim($phoneData->versionID->__toString()),
+                'appLoadID' => trim($phoneData->appLoadID->__toString()),
+                'timezone' => trim($phoneData->timezone->__toString()),
+            ]);
+        }
+
+        return $this;
+    }
+
+
+    /**
+     * @return $this|bool
+     */
+    protected function getDataFromWebNetConf()
+    {
+        if (isset($this->ipAddress) && isset($this->model)) {
+
+            // Чтение XML
+            $phoneData = simplexml_load_file('http://' . $this->ipAddress . '/NetworkConfigurationX');
+            if (false !== $phoneData) {
+                $this->fill([
+                    'dhcpEnabled' => trim($phoneData->DHCPEnabled->__toString()),
+                    'dhcpServer' => trim($phoneData->DHCPServer->__toString()),
+                    'domainName' => trim($phoneData->DomainName->__toString()),
+                    'subNetMask' => trim($phoneData->SubNetMask->__toString()),
+                    'tftpServer1' => trim($phoneData->TFTPServer1->__toString()),
+                    'tftpServer2' => trim($phoneData->TFTPServer2->__toString()),
+                    'defaultRouter' => trim($phoneData->DefaultRouter1->__toString()),
+                    'dnsServer1' => trim($phoneData->DNSServer1->__toString()),
+                    'dnsServer2' => trim($phoneData->DNSServer2->__toString()),
+                    'callManager1' => trim($phoneData->CallManager1->__toString()),
+                    'callManager2' => trim($phoneData->CallManager2->__toString()),
+                    'callManager3' => trim($phoneData->CallManager3->__toString()),
+                    'callManager4' => trim($phoneData->CallManager4->__toString()),
+                    'vlanId' => trim($phoneData->VLANId->__toString()),
+                    'userLocale' => trim($phoneData->UserLocale->__toString()),
+                ]);
+            } else {
+                // Чтение HTML
+                $dom = HtmlDomParser::file_get_html('http://' . $this->ipAddress . '/NetworkConfiguration');
+                if (false !== $dom) {
+                    // Define the phone's environment
+                    preg_match('~\d+~', $this->model, $matches);
+                    switch ($matches[0]) {
+                        case '7912':
+                            $rows = $dom->find('form table tr');
+                            $item = 1;
+                            break;
+                        case '7905':
+                            $rows = $dom->find('form table tr');
+                            $item = 1;
+                            break;
+                        case '6921':
+                            $rows = $dom->find('table tr');
+                            $item = 2;
+                            break;
+                        default:
+                            $rows = [];
+                    }
+
+                    $phoneFields = [
+                        'dhcpenabled' => 'dhcpEnabled',
+                        'dhcpвключен' => 'dhcpEnabled',
+                        'dhcpserver' => 'dhcpServer',
+                        'domainname' => 'domainName',
+                        'tftpserver1' => 'tftpServer1',
+                        'tftpserver2' => 'tftpServer2',
+                        'defaultrouter' => 'defaultRouter',
+                        'defaultrouter1' => 'defaultRouter',
+                        'dnsserver1' => 'dnsServer1',
+                        'dnsserver2' => 'dnsServer2',
+                        'callmanager1' => 'callManager1',
+                        'unifiedcm1' => 'callManager1',
+                        'callmanager2' => 'callManager2',
+                        'callmanager3' => 'callManager3',
+                        'callmanager4' => 'callManager4',
+                        'operationalvlanid' => 'vlanId',
+                        'действующийкодvlan' => 'vlanId',
+                        'userlocale' => 'userLocale',
+                        'subnetmask' => 'subNetMask',
+                        'маскаподсети' => 'subNetMask',
+                    ];
+
+                    foreach ($rows as $row) {
+                        $field = $phoneFields[mb_ereg_replace(' ', '', mb_strtolower($row->find('td', 0)->text()))];
+                        if (!is_null($field)) {
+                            $this->fill([$field => trim($row->find('td', $item)->text())]);
+                        }
+                    }
+
+                } else {
+                    return false;
+                }
+            }
+        }
+
+        return $this;
+    }
+
+
+    /**
+     * @return $this|bool
+     */
+    protected function getDataFromWebPortInfo()
+    {
+        if (isset($this->ipAddress) && isset($this->model)) {
+            // Чтение XML
+            $phoneData = simplexml_load_file('http://' . $this->ipAddress . '/PortInformationX?1');
+            if (false !== $phoneData) {
+                preg_match('~\d+~', $this->model, $matches);
+                switch ($matches[0]) {
+                    case '7940':
+                        $this->fill([
+                            'cdpNeighborDeviceId' => trim($phoneData->deviceId->__toString()),
+                            'cdpNeighborIP' => trim($phoneData->ipAddress->__toString()),
+                            'cdpNeighborPort' => trim($phoneData->port->__toString()),
+                        ]);
+                        break;
+                    default:
+                        $this->fill([
+                            'cdpNeighborDeviceId' => trim($phoneData->CDPNeighborDeviceId->__toString()),
+                            'cdpNeighborIP' => trim($phoneData->CDPNeighborIP->__toString()),
+                            'cdpNeighborPort' => trim($phoneData->CDPNeighborPort->__toString()),
+                        ]);
+                }
+
+
+            } else {
+                // Чтение HTML
+                $dom = HtmlDomParser::file_get_html('http://' . $this->ipAddress . '/PortInformation?1');
+                if (false !== $dom) {
+                    // Define the phone's environment
+                    preg_match('~\d+~', $this->model, $matches);
+                    switch ($matches[0]) {
+                        case '6921':
+                            $rows = $dom->find('table tr');
+                            $item = 2;
+                            break;
+                        default:
+                            $rows = [];
+                    }
+
+                    $phoneFields = [
+                        'идентустройствасоседа' => 'cdpNeighborDeviceId',
+                        'ipадрессоседа' => 'cdpNeighborIP',
+                        'портсоседа' => 'cdpNeighborPort',
+                    ];
+
+                    foreach ($rows as $row) {
+                        $field = $phoneFields[mb_ereg_replace('[ -]', '', mb_strtolower($row->find('td', 0)->text()))];
+                        if (!is_null($field)) {
+                            $this->fill([$field => trim($row->find('td', $item)->text())]);
+                        }
+                    }
+
+                } else {
+                    return false;
+                }
+            }
+        }
+
+        return $this;
+    }
+
+
+
+    /**
      * Получить данные по зарегистрированным телефонам из cucm используя RisPort
      *
+     * @param string $ip
+     * @param Collection $phones
+     * @param Collection $nodes
      * @return Collection
      */
     protected static function getAllFromCucmRis(string $ip, Collection $phones, Collection $nodes)
@@ -154,12 +342,12 @@ class Phone extends Appliance
                             foreach ($cmNode->CmDevices as $cmDevice) {
                                 $registeredPhones->add(
                                     (new self())->fill([
-                                        'cmName' => $node->cmNodeName,
-                                        'cmIpAddress' => $node->cmNodeIpAddress,
-                                        'name' => $cmDevice->Name,
-                                        'ipAddress' => $cmDevice->IpAddress,
-                                        'description' => $cmDevice->Description,
-                                        'status' => $cmDevice->Status,
+                                        'cmName' => trim($node->cmNodeName),
+                                        'cmIpAddress' => trim($node->cmNodeIpAddress),
+                                        'name' => trim($cmDevice->Name),
+                                        'ipAddress' => trim($cmDevice->IpAddress),
+                                        'description' => trim($cmDevice->Description),
+                                        'status' => trim($cmDevice->Status),
                                     ])
                                 );
                             }
@@ -190,12 +378,12 @@ class Phone extends Appliance
                     foreach ($cmNode->CmDevices as $cmDevice) {
                         $registeredPhones->add(
                             (new self())->fill([
-                                'cmName' => $node->cmNodeName,
-                                'cmIpAddress' => $node->cmNodeIpAddress,
-                                'name' => $cmDevice->Name,
-                                'ipAddress' => $cmDevice->IpAddress,
-                                'description' => $cmDevice->Description,
-                                'status' => $cmDevice->Status,
+                                'cmName' => trim($node->cmNodeName),
+                                'cmIpAddress' => trim($node->cmNodeIpAddress),
+                                'name' => trim($cmDevice->Name),
+                                'ipAddress' => trim($cmDevice->IpAddress),
+                                'description' => trim($cmDevice->Description),
+                                'status' => trim($cmDevice->Status),
                             ])
                         );
                     }
@@ -388,6 +576,7 @@ class Phone extends Appliance
                 'applianceSoft' => self::PHONESOFT,
                 'softwareVersion' => $softwareVersion,
                 'ip' => $this->ipAddress,
+                'subNetMask' => $this->subNetMask,
                 'macAddress' => $macAddress,
                 'LotusId' => $cucmLocation->lotusId,
                 'hostname' => '',
@@ -408,6 +597,7 @@ class Phone extends Appliance
             $this->debugLogger->info('process: ' . '[name]=' . $this->ipAddress . '; [phone]= OK');
 
             // Update PhoneInfo
+            $this->dhcpEnabled = mb_strtolower($this->dhcpEnabled);
             $this->phoneInfo->fill([
                 'phone' => $this->appliance,
                 'model' => $this->model,
@@ -420,6 +610,24 @@ class Phone extends Appliance
                 'devicePool' => $this->devicePool,
                 'alertingName' => $this->alertingName,
                 'partition' => $this->partition,
+                'timezone' => $this->timezone,
+                'domainName' => ('Нет' == $this->domainName) ? null : $this->domainName,
+                'dhcpEnabled' => (('yes' == $this->dhcpEnabled || 1 == $this->dhcpEnabled || 'да' == $this->dhcpEnabled) ? true : false),
+                'dhcpServer' => (false === ($dhcpIp = (new IpTools(($this->dhcpServer) ?? ''))->address)) ? null : $dhcpIp,
+                'tftpServer1' => (false === ($tftp1Ip = (new IpTools(($this->tftpServer1) ?? ''))->address)) ? null : $tftp1Ip,
+                'tftpServer2' => (false === ($tftp2Ip = (new IpTools(($this->tftpServer2) ?? ''))->address)) ? null : $tftp2Ip,
+                'defaultRouter' => (false === ($routerIp = (new IpTools(($this->defaultRouter) ?? ''))->address)) ? null : $routerIp,
+                'dnsServer1' => (false === ($dns1Ip = (new IpTools(($this->dnsServer1) ?? ''))->address)) ? null : $dns1Ip,
+                'dnsServer2' => (false === ($dns2Ip = (new IpTools(($this->dnsServer2) ?? ''))->address)) ? null : $dns2Ip,
+                'callManager1' => preg_replace('~[ ]+~', ' ', $this->callManager1),
+                'callManager2' => preg_replace('~[ ]+~', ' ', $this->callManager2),
+                'callManager3' => preg_replace('~[ ]+~', ' ', $this->callManager3),
+                'callManager4' => preg_replace('~[ ]+~', ' ', $this->callManager4),
+                'vlanId' => $this->vlanId,
+                'userLocale' => $this->userLocale,
+                'cdpNeighborDeviceId' => $this->cdpNeighborDeviceId,
+                'cdpNeighborIP' => (false === ($neighborIp = (new IpTools(($this->cdpNeighborIP) ?? ''))->address)) ? null : $neighborIp,
+                'cdpNeighborPort' => $this->cdpNeighborPort,
             ])->save();
 
             $this->debugLogger->info('process: ' . '[name]=' . $this->ipAddress . '; [phoneInfo]= OK');
@@ -430,6 +638,4 @@ class Phone extends Appliance
             return false;
         }
     }
-
-
 }
